@@ -7,27 +7,24 @@ tile::tile()
 
 tile::tile(sf::Texture* newText)
 {
-//     currTexture = newText;
-// 
-//     currTexture.isSmooth();
-    currSprite = new sf::Sprite(*newText);
-    currSprite->setTexture(*newText);
+    selected = false;
+    currTexture = newText;
+    updateSprite();
 }
 
 tile::tile(std::string fileName)
 {
-    if(!currTexture.loadFromFile(fileName))
+    if(!currTexture->loadFromFile(fileName))
     {
         std::cout << "ERROR";
     }
-    currTexture.isSmooth();
-    currSprite = new sf::Sprite(currTexture);
-    currSprite->setTexture(currTexture);
+    currTexture->isSmooth();
+    tile(currTexture);
 }
 
 sf::Texture tile::getTexture()
 {
-    return currTexture;
+    return *currTexture;
 }
 
 sf::Sprite tile::getSprite()
@@ -40,6 +37,26 @@ void tile::setPosition(float x, float y)
     currSprite->setPosition(x, y);
 }
 
+void tile::selectTile()
+{
+    selected = true;
+    updateSprite();
+}
+
+void tile::unselectTile()
+{
+    selected = false;
+    updateSprite();
+}
+
+void tile::updateSprite()
+{
+    currSprite = new sf::Sprite(*currTexture);
+    if(selected)
+    {
+	currSprite->setColor(sf::Color::Red);
+    }
+}
 //tile::getUnit()
 //{
 //

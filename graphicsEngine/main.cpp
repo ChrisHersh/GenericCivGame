@@ -2,8 +2,10 @@
 #include <sys/resource.h>
 #include <iostream>
 #include <cmath>
+#include <vector>
 #include "tile.h"
 
+std::vector<int> findHexTile(float x, float y);
 
 int main()
 {
@@ -21,11 +23,11 @@ int main()
 
     std::cout << heightSqrt << " -\t- " << vertOffset << std::endl;
 
-    sf::RenderWindow window(sf::VideoMode(800,500), "SFML works!");
+    sf::RenderWindow window(sf::VideoMode(500,500), "SFML works!");
     window.clear();
-    float x = 250.0;
-    float y = 250.0;
-    sf::View view(sf::Vector2f(x,y), sf::Vector2f(x*2,y*2));
+    float viewSizeX = 250.0;
+    float viewSizeY = 250.0;
+    sf::View view(sf::Vector2f(viewSizeX,viewSizeY), sf::Vector2f(viewSizeX*2,viewSizeY*2));
     window.setView(view);
     //window.setFramerateLimit(300);
     //window.setVerticalSyncEnabled(false);
@@ -80,12 +82,14 @@ int main()
     sf::Time fpsDelay = sf::milliseconds(1000);
     sf::Time currTime;
 
+    bool mouseMoved = false;
     int mouseDragPositionX;// = view.getCenter().x;
     int mouseDragPositionY;// = view.getCenter().y;
 
-    bool mouseMoved = false;
+    
     bool mouseLeftDown = false;
 
+    tile *selectedTile;
     while (window.isOpen())
     {
         currTime = gameClock.getElapsedTime();
@@ -100,12 +104,11 @@ int main()
         {
             for(int p = 0; p < numVert; p++)
             {
-                window.draw(tiles[i][p].getSprite());
+//                 window.draw(tiles[i][p].getSprite());
                 window.draw(tiles[i+numHorz][p].getSprite());
-                window.draw(tiles[i+2*numHorz][p].getSprite());
+//                 window.draw(tiles[i+2*numHorz][p].getSprite());
             }
         }
-
         window.display();
         sf::Event event;
         while (window.pollEvent(event))
@@ -160,42 +163,69 @@ int main()
             }
             if(event.type == sf::Event::Resized)
             {
-                view = sf::View(sf::FloatRect(x, y, event.size.width, event.size.height));
+                view = sf::View(sf::FloatRect(viewSizeX, viewSizeY, event.size.width, event.size.height));
 		view.setSize(viewSize);
                 window.setView(view);
             }
             if(event.type == sf::Event::MouseButtonPressed)
             {
+		//std::cout << "Mouse 1 Down" << std::endl;
                 if(event.mouseButton.button == sf::Mouse::Left)
                 {
 		    mouseLeftDown = true;
+		    mouseMoved = false;
                     //mouseDragTime = gameClock.getElapsedTime();
-		    mouseDragPositionX = event.mouseButton.x;
-		    mouseDragPositionY = event.mouseButton.y;
+		    mouseDragPositionX = event.mouseMove.x;
+		    mouseDragPositionY = event.mouseMove.y;
                 }
             }
             if(event.type == sf::Event::MouseButtonReleased)
 	    {
-		mouseLeftDown = false;
+		if(event.mouseButton.button == sf::Mouse::Left)
+		{
+		    mouseLeftDown = false;
+		}
+		if(!mouseMoved)
+		{
+		    //std::vector<int> result = 
+		    sf::Vector2f tmp;
+		    tmp.x = mouseDragPositionX;
+		    tmp.y = mouseDragPositionY;
+		    sf::Vector2i pixel = window.mapCoordsToPixel(tmp);
+		    findHexTile(pixel.x, pixel.y);
+		    //selectedTile = &tiles[result[0]][result[1]];
+		    //selectedTile->selectTile();
+		}
 	    }
             if(event.type == sf::Event::MouseMoved)
             {
-                mouseMoved = true;
+		mouseMoved = true;
 		if(mouseLeftDown)
 		{
-		    int mouseXDiff = event.mouseButton.x - mouseDragPositionX;
-		    int mouseYDiff = event.mouseButton.y - mouseDragPositionY;
-		    
-		    view.move(mouseXDiff, mouseYDiff);
+		    float mouseXDiff = event.mouseMove.x - mouseDragPositionX;
+		    float mouseYDiff = event.mouseMove.y - mouseDragPositionY;		    
+		    view.move(mouseXDiff*2, mouseYDiff*2);
 		    window.setView(view);
 		    window.clear();
 		}
-		mouseDragPositionX = event.mouseButton.x;
-		mouseDragPositionY = event.mouseButton.y;
-		std::cout << mouseDragPositionY << std::endl;
+		mouseDragPositionX = event.mouseMove.x;
+		mouseDragPositionY = event.mouseMove.y;
+		//std::cout << mouseDragPositionY << std::endl;
             }
-            
         }
-
     }
 }
+
+std::vector<int> findHexTile(float x, float y)
+{
+    double row = 2.0/3.0 * x / 32.0;
+    double column = (1.0/3*std::sqrt(3.0) * y - 1.0/3.0 * x) / 32.0;
+    std::vector<int> result;
+    //result.push_back(row);
+    //result.push_back(column);
+    
+    std::cout<<row<<" -- " << column << std::endl;
+    
+    return result;
+}
+

@@ -16,12 +16,18 @@ public:
     void setPosition(float x, float y);
     //getUnit();
     //setUnit();
+    void selectTile();
+    void unselectTile();
+    
 
 
 private:
+    void updateSprite();
+    
     //Unit currUnit;
-    sf::Texture currTexture;
+    sf::Texture *currTexture;
     sf::Sprite *currSprite;
+    bool selected;
 };
 
 #endif // TILE_H
