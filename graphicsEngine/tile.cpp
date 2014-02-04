@@ -34,7 +34,9 @@ sf::Sprite tile::getSprite()
 
 void tile::setPosition(float x, float y)
 {
-    currSprite->setPosition(x, y);
+    xPos = x;
+    yPos = y;
+    currSprite->setPosition(xPos, yPos);
 }
 
 void tile::selectTile()
@@ -51,11 +53,14 @@ void tile::unselectTile()
 
 void tile::updateSprite()
 {
+    //std::cout<<"Update" << std::endl;
     currSprite = new sf::Sprite(*currTexture);
     if(selected)
     {
+	std::cout << "\tRed-Selected" << std::endl;
 	currSprite->setColor(sf::Color::Red);
     }
+    currSprite->setPosition(xPos, yPos);
 }
 //tile::getUnit()
 //{

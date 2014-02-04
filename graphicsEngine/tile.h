@@ -20,14 +20,15 @@ public:
     void unselectTile();
     
 
+    void updateSprite();
 
 private:
-    void updateSprite();
     
     //Unit currUnit;
     sf::Texture *currTexture;
     sf::Sprite *currSprite;
     bool selected;
+    float xPos, yPos;
 };
 
 #endif // TILE_H
