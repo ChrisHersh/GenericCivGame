@@ -4,20 +4,22 @@
 #include <cmath>
 #include <vector>
 #include "tile.h"
+#include <cstdlib>
 
 sf::Vector2f findHexTile(float mouseX, float mouseY);
 sf::Vector2f roundToNearestHex(sf::Vector2f coords);
 
 double height; 
 double width;
+int size;
 
 int main()
 {
-    int size = 32;
+    size = 32;
     double zoom = 1;
 
-    int numHorz= 20;
-    int numVert = 20;
+    int numHorz= 40;
+    int numVert = 40;
 
     double heightSqrt = std::sqrt(3.0)/2;
     double horzOffset = height = (3.0/4)*(2.0*size);
@@ -53,29 +55,37 @@ int main()
     }
     waterText.setSmooth(false);
 
+    
     tile tiles[numHorz*3][numVert];
-
+    
+    int rhombusOffset = 0;
+    int vertCount = 1;
     for(int i = 0; i < numHorz; i++)
     {
-        for(int p = 0; p < numVert; p++)
+	rhombusOffset += vertOffset*(vertCount%2);
+	for(int p = 0; p < numVert; p++)
         {
             //std::cout << i << " -- " << p << std::endl;
             tiles[i][p] = tile(&waterText);
             tiles[i+numHorz][p] = tile(&oreText);
             tiles[i+numHorz*2][p] = tile(&waterText);
+	    
             if(i%2 == 0)
             {
-                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset);
-                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset);
-                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset);
+                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+rhombusOffset);
+                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+rhombusOffset);
+                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+rhombusOffset);
             }
             else
             {
-                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+heightSqrt*size);
-                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+heightSqrt*size);
-                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+heightSqrt*size);
+                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+		
             }
+            //rhombusOffset = rhombusOffset + vertOffset*(i%2);
         }
+        vertCount++;
     }
     sf::Shader::isAvailable();
 
@@ -93,32 +103,30 @@ int main()
     
     bool mouseLeftDown = false;
 
-    tile *selectedTile;
+    tile *selectedTile = 0;
     
-    tiles[2+numHorz][3].selectTile();
+    //tiles[2+numHorz][3].selectTile();
     
     while (window.isOpen())
     {
-//         currTime = gameClock.getElapsedTime();
-//         if(currTime.asMilliseconds() >= fpsDelay.asMilliseconds())
-//         {
-//             std::cout << "FPS: " << fpsCounter << "\t X- " << mouseDragPositionX << "\t Y- " << mouseDragPositionY << std::endl;
-//             fpsCounter = 0;
-//             gameClock.restart();
-//         }
-//         ++fpsCounter;
+        currTime = gameClock.getElapsedTime();
+        if(currTime.asMilliseconds() >= fpsDelay.asMilliseconds())
+        {
+            //std::cout << "FPS: " << fpsCounter << "\t X- " << mouseDragPositionX << "\t Y- " << mouseDragPositionY << std::endl;
+            fpsCounter = 0;
+            gameClock.restart();
+        }
+        ++fpsCounter;
         for(int i = 0; i < numHorz; i++)
         {
             for(int p = 0; p < numVert; p++)
             {
-//                 window.draw(tiles[i][p].getSprite());
+		//window.draw(tiles[i][p].getSprite());
 		//tiles[i+numHorz][p].updateSprite();
                 window.draw(tiles[i+numHorz][p].getSprite());
-//                 window.draw(tiles[i+2*numHorz][p].getSprite());
+                //window.draw(tiles[i+2*numHorz][p].getSprite());
             }
         }
-        tiles[0][0].setPosition(0,0);
-	window.draw(tiles[0][0].getSprite());
         window.display();
         sf::Event event;
         while (window.pollEvent(event))
@@ -197,8 +205,10 @@ int main()
 		    sf::Vector2i tmp;
 		    tmp.x = mouseDragPositionX;
 		    tmp.y = mouseDragPositionY;
-		    sf::Vector2f pixel = window.mapPixelToCoords(tmp, view);
-		    sf::Vector2f result = findHexTile(pixel.x, pixel.y);
+		    sf::Vector2f mapCoords = window.mapPixelToCoords(tmp, view);
+		    sf::Vector2f result = findHexTile(mapCoords.x, mapCoords.y);
+		    if(selectedTile != 0)
+			selectedTile->unselectTile();
 		    selectedTile = &tiles[(int)result.x+numHorz][(int)result.y];
 		    selectedTile->selectTile();
 		}
@@ -222,7 +232,12 @@ int main()
     }
 }
 
-sf::Vector2f findHexTile(float mouseX, float mouseY)
+// int getXPositionForTiles(int mapPos)
+// {
+//     return i*horzOffset+rhombusOffset+wrapOffset*mapPos;
+// }
+
+sf::Vector2f findHexTile(float x, float y)
 {
     int intHeight = round(height);
     int intWidth =  round(width);
@@ -252,20 +267,46 @@ sf::Vector2f findHexTile(float mouseX, float mouseY)
 //     tileX = (tileY % 2 != 0 ? (int) (mouseX / 40) : (int) (mouseX + 20) / 40);
     
     sf::Vector2f result;
-    result.y = (int) mouseY / intHeight;//(int) mouseY / intHeight;
-    result.x = ((int)result.y % 2 != 0 ? (int) mouseX / intWidth : (int) (mouseX + intWidth/2) / intWidth);//((int)result.y % 2 != 0 ? (int) (mouseX / intWidth) : (int) (mouseX + intWidth/2) / intWidth);
+    /*
+    std::cout << "Click calcs -------\n";
+    std::cout << "X: " << x << std::endl;
+    std::cout << "Y: " << y << std::endl;
+    
+    x = x/(size*std::sqrt(3.0));    
+    y = y/(size*std::sqrt(3.0));
+    
+    std::cout << "X: " << x << std::endl;
+    std::cout << "Y: " << y << std::endl;
+    
+    int temp = std::floor(x+std::sqrt(3.0)*(y+1));
+    
+    
+    std::cout << "Temp: " << temp << std::endl;
+    
+    result.x = std::floor(std::floor((std::floor(2*(x+1))+temp)/3));//(int) mouseY / intHeight;//(int) mouseY / intHeight;
+    result.y = std::floor(std::floor((temp+std::floor(-1*x+std::sqrt(3) * (y+1)))/3));//((int)result.y % 2 != 0 ? (int) mouseX / intWidth : (int) (mouseX + intWidth/2) / intWidth);//((int)result.y % 2 != 0 ? (int) (mouseX / intWidth) : (int) (mouseX + intWidth/2) / intWidth);
+    
+    result.x--;
+    result.y--;
+    */
+    
+    //x = (x - (64 / 2)) / 64;
+
+    //double t1 = y / 32;//42.1930088996f;
+    //double t2 = std::floor(x + t1);
+    
+    //result.x = std::floor((std::floor(t1 - x) + t2) / 3);
+    //result.y = std::floor((std::floor(2 * x + 1) + t2) / 3);// - result.x;
+/*    
+    result.x = (y/(size * (3/2)));
+    result.y = (x/(size * std::sqrt(3))) - (0.5 * ((int)result.x & 1));*/
+
+    result.x = (2.0/3)*x / size;
+    result.y = ((1.0/3) * std::sqrt(3) * y - (1.0/3) * x) / size;
+    
+    //cout << "X: " << x << endl;
+    //cout << "Y: " << y << endl;
+    
     std::cout<<"X -- " << result.x << "\tY -- " << result.y <<std::endl; 
     return result;
 }
-
-sf::Vector2f roundToNearestHex(sf::Vector2f coords)
-{
-    int roundX = round(coords.x);
-    int roundY = round(coords.y);
-    
-    coords.x = roundX;
-    coords.y = roundY;
-    
-    return coords;
-}
-
