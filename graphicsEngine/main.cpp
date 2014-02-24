@@ -7,11 +7,19 @@
 #include <cstdlib>
 
 sf::Vector2f findHexTile(float mouseX, float mouseY);
-sf::Vector2f roundToNearestHex(sf::Vector2f coords);
+sf::Vector2f findNearestHex(sf::Vector2f coords);
 
-double height; 
-double width;
+float getXPositionForTiles(int mapPos, int i);
+float getYPositionForTiles(bool oddRow, int p, int rhombusOffset);
+
 int size;
+
+double vertOffset;
+double horzOffset;
+double heightSqrt;
+int wrapOffset;
+
+float viewZoomLevel = 1;
 
 int main()
 {
@@ -21,15 +29,15 @@ int main()
     int numHorz= 40;
     int numVert = 40;
 
-    double heightSqrt = std::sqrt(3.0)/2;
-    double horzOffset = height = (3.0/4)*(2.0*size);
-    double vertOffset = width = heightSqrt*(2.0*size);
+    heightSqrt = std::sqrt(3.0)/2;
+    horzOffset = (3.0/4)*(2.0*size);
+    vertOffset = heightSqrt*(2.0*size);
 
-    int wrapOffset = numHorz*horzOffset;
+    wrapOffset = numHorz*horzOffset;
 
     std::cout << heightSqrt << " -\t- " << vertOffset << std::endl;
 
-    sf::RenderWindow window(sf::VideoMode(500,500), "Coordinates are as evil as printers");
+    sf::RenderWindow window(sf::VideoMode(500,500), "The Hex Selection Is Done...Forever");
     window.clear();
     float viewSizeX = 250.0;
     float viewSizeY = 250.0;
@@ -55,33 +63,41 @@ int main()
     }
     waterText.setSmooth(false);
 
-    
+
     tile tiles[numHorz*3][numVert];
-    
+
     int rhombusOffset = 0;
     int vertCount = 1;
     for(int i = 0; i < numHorz; i++)
     {
-	rhombusOffset += vertOffset*(vertCount%2);
-	for(int p = 0; p < numVert; p++)
+        rhombusOffset += vertOffset*(vertCount%2);
+        for(int p = 0; p < numVert; p++)
         {
             //std::cout << i << " -- " << p << std::endl;
             tiles[i][p] = tile(&waterText);
             tiles[i+numHorz][p] = tile(&oreText);
             tiles[i+numHorz*2][p] = tile(&waterText);
-	    
+
             if(i%2 == 0)
             {
-                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+rhombusOffset);
-                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+rhombusOffset);
-                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+rhombusOffset);
+                tiles[i][p].setPosition(getXPositionForTiles(-1, i), getYPositionForTiles(false, p, rhombusOffset));
+                tiles[i+numHorz][p].setPosition(getXPositionForTiles(0, i), getYPositionForTiles(false, p, rhombusOffset));
+                tiles[i+numHorz*2][p].setPosition(getXPositionForTiles(1, i), getYPositionForTiles(false, p, rhombusOffset));
+
+// 		tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+rhombusOffset);
+//                 tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+rhombusOffset);
+//                 tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+rhombusOffset);
             }
             else
             {
-                tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
-                tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
-                tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
-		
+                tiles[i][p].setPosition(getXPositionForTiles(-1, i), getYPositionForTiles(true, p, rhombusOffset));
+                tiles[i+numHorz][p].setPosition(getXPositionForTiles(0, i), getYPositionForTiles(true, p, rhombusOffset));
+                tiles[i+numHorz*2][p].setPosition(getXPositionForTiles(1, i), getYPositionForTiles(true, p, rhombusOffset));
+
+// 		tiles[i][p].setPosition(i*horzOffset-wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+//                 tiles[i+numHorz][p].setPosition(i*horzOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+//                 tiles[i+numHorz*2][p].setPosition(i*horzOffset+wrapOffset, p*vertOffset+heightSqrt*size+rhombusOffset);
+
             }
             //rhombusOffset = rhombusOffset + vertOffset*(i%2);
         }
@@ -90,7 +106,7 @@ int main()
     sf::Shader::isAvailable();
 
     sf::Vector2f viewSize = view.getSize();
-    
+
     int fpsCounter = 0;
     sf::Clock gameClock;
     sf::Time fpsDelay = sf::milliseconds(1000);
@@ -100,13 +116,13 @@ int main()
     int mouseDragPositionX = 0;// = view.getCenter().x;
     int mouseDragPositionY = 0;// = view.getCenter().y;
 
-    
+
     bool mouseLeftDown = false;
 
     tile *selectedTile = 0;
-    
+
     //tiles[2+numHorz][3].selectTile();
-    
+    //tiles[0][0].setPosition(0,0);
     while (window.isOpen())
     {
         currTime = gameClock.getElapsedTime();
@@ -121,10 +137,10 @@ int main()
         {
             for(int p = 0; p < numVert; p++)
             {
-		//window.draw(tiles[i][p].getSprite());
-		//tiles[i+numHorz][p].updateSprite();
+                window.draw(tiles[i][p].getSprite());
+                //tiles[i+numHorz][p].updateSprite();
                 window.draw(tiles[i+numHorz][p].getSprite());
-                //window.draw(tiles[i+2*numHorz][p].getSprite());
+                window.draw(tiles[i+2*numHorz][p].getSprite());
             }
         }
         window.display();
@@ -145,19 +161,19 @@ int main()
 
                 if(leftPressed)
                 {
-                    movementOnX-=10;
+                    movementOnX-=10*viewZoomLevel;
                 }
                 if(downPressed)
                 {
-                    movementOnY+=10;
+                    movementOnY+=10*viewZoomLevel;
                 }
                 if(rightPressed)
                 {
-                    movementOnX+=10;
+                    movementOnX+=10*viewZoomLevel;
                 }
                 if(upPressed)
                 {
-                    movementOnY-=10;
+                    movementOnY-=10*viewZoomLevel;
                 }
                 view.move(movementOnX, movementOnY);
                 window.setView(view);
@@ -167,146 +183,142 @@ int main()
             {
                 if(event.mouseWheel.delta == 1)
                 {
+		    viewZoomLevel *= .75;
                     zoom = .75;
                 }
                 if(event.mouseWheel.delta == -1)
                 {
+		    viewZoomLevel *= 1.5;
                     zoom = 1.5;
                 }
                 view.zoom(zoom);
-		viewSize = view.getSize();
+                //viewSize = view.getSize();
                 window.setView(view);
                 window.clear();
             }
             if(event.type == sf::Event::Resized)
             {
-                view = sf::View(sf::FloatRect(viewSizeX, viewSizeY, event.size.width, event.size.height));
-		view.setSize(viewSize);
+                float viewNewX = event.size.width;
+                float viewNewY = event.size.height;
+                float viewRatio = viewNewX/viewNewY;
+                viewSizeX = viewSizeY*viewRatio;
+                view = sf::View(sf::FloatRect(0.f, 0.f, event.size.width, event.size.height));
                 window.setView(view);
             }
             if(event.type == sf::Event::MouseButtonPressed)
             {
                 if(event.mouseButton.button == sf::Mouse::Left)
                 {
-		    mouseLeftDown = true;
-		    mouseMoved = false;
-		    mouseDragPositionX = sf::Mouse::getPosition(window).x;
-		    mouseDragPositionY = sf::Mouse::getPosition(window).y;
+                    mouseLeftDown = true;
+                    mouseMoved = false;
+                    mouseDragPositionX = sf::Mouse::getPosition(window).x;
+                    mouseDragPositionY = sf::Mouse::getPosition(window).y;
                 }
             }
             if(event.type == sf::Event::MouseButtonReleased)
-	    {
-		if(event.mouseButton.button == sf::Mouse::Left)
-		{
-		    mouseLeftDown = false;
-		}
-		if(!mouseMoved)
-		{
-		    sf::Vector2i tmp;
-		    tmp.x = mouseDragPositionX;
-		    tmp.y = mouseDragPositionY;
-		    sf::Vector2f mapCoords = window.mapPixelToCoords(tmp, view);
-		    sf::Vector2f result = findHexTile(mapCoords.x, mapCoords.y);
-		    if(selectedTile != 0)
-			selectedTile->unselectTile();
-		    selectedTile = &tiles[(int)result.x+numHorz][(int)result.y];
-		    selectedTile->selectTile();
-		}
-	    }
+            {
+                if(event.mouseButton.button == sf::Mouse::Left)
+                {
+                    mouseLeftDown = false;
+                }
+                if(!mouseMoved)
+                {
+                    sf::Vector2i tmp;
+                    tmp.x = mouseDragPositionX;
+                    tmp.y = mouseDragPositionY;
+                    sf::Vector2f mapCoords = window.mapPixelToCoords(tmp, view);
+                    sf::Vector2f result = findHexTile(mapCoords.x, mapCoords.y);
+                    if(selectedTile != 0)
+                        selectedTile->unselectTile();
+                    selectedTile = &tiles[(int)result.x+numHorz][(int)result.y];
+                    selectedTile->selectTile();
+                }
+            }
             if(event.type == sf::Event::MouseMoved)
             {
-		mouseMoved = true;
-		if(mouseLeftDown)
-		{
-		    float mouseXDiff = mouseDragPositionX - sf::Mouse::getPosition(window).x;
-		    float mouseYDiff = mouseDragPositionY - sf::Mouse::getPosition(window).y;		    
-		    view.move(mouseXDiff*5, mouseYDiff*5);
-		    window.setView(view);
-		    window.clear();
-		}
-		
-		mouseDragPositionX = sf::Mouse::getPosition(window).x;
-		mouseDragPositionY = sf::Mouse::getPosition(window).y;
+                mouseMoved = true;
+                if(mouseLeftDown)
+                {
+                    float mouseXDiff = mouseDragPositionX - sf::Mouse::getPosition(window).x;
+                    float mouseYDiff = mouseDragPositionY - sf::Mouse::getPosition(window).y;
+                    view.move(mouseXDiff*viewZoomLevel, mouseYDiff*viewZoomLevel);
+                    window.setView(view);
+                    window.clear();
+                }
+
+                mouseDragPositionX = sf::Mouse::getPosition(window).x;
+                mouseDragPositionY = sf::Mouse::getPosition(window).y;
             }
         }
     }
 }
 
-// int getXPositionForTiles(int mapPos)
-// {
-//     return i*horzOffset+rhombusOffset+wrapOffset*mapPos;
-// }
+float getXPositionForTiles(int mapPos, int i)
+{
+    return i*horzOffset+(wrapOffset*mapPos);
+}
+
+float getYPositionForTiles(bool oddRow, int p, int rhombusOffset)
+{
+    if(oddRow)
+        return p*vertOffset+heightSqrt*size+rhombusOffset;
+    else
+        return p*vertOffset+rhombusOffset;
+}
 
 sf::Vector2f findHexTile(float x, float y)
 {
-    int intHeight = round(height);
-    int intWidth =  round(width);
-//     std::cout<< "FindHex     X -- " << x << "\tY -- " << y << std::endl;
-//     double row = 2.0/3.0 * x / 32.0;
-//     double column = (1.0/3*std::sqrt(3.0) * y - 1.0/3.0 * x) / 32.0;
-//     sf::Vector2f result;
-//     result.x = row;
-//     result.y = column;
-//     
-//     std::cout<<row<<" -- " << column << std::endl;
-//     
-//     return roundToNearestHex(result);
-    
-//     int row = (int) mouseY / intHeight;
-//     int column = (row % 2 != 0 ? (int) (mouseX / intWidth) : (int) (mouseX + intWidth/2) / intWidth);
-//     //std::cout<<"X -- " << column << "\tY -- " << row <<std::endl; 
-//     int lineY = mouseY - (row * intHeight);
-//     int lineX = (row % 2 != 0 ? mouseX - (column * intWidth) : mouseX - (column * intWidth) + intWidth/2);
-// 
-//     if (lineY + (lineX / 2) < 10) // LEFT triangle
-// 	mouseY -= 20;
-//     else if (lineY - (lineX / 2) < -10) // RIGHT triangle
-// 	mouseY -= 20;
+    y = y - heightSqrt*size;
+    //x = x + size;
 
-//     tileY = (int) mouseY / 30;
-//     tileX = (tileY % 2 != 0 ? (int) (mouseX / 40) : (int) (mouseX + 20) / 40);
-    
     sf::Vector2f result;
-    /*
-    std::cout << "Click calcs -------\n";
-    std::cout << "X: " << x << std::endl;
-    std::cout << "Y: " << y << std::endl;
-    
-    x = x/(size*std::sqrt(3.0));    
-    y = y/(size*std::sqrt(3.0));
-    
-    std::cout << "X: " << x << std::endl;
-    std::cout << "Y: " << y << std::endl;
-    
-    int temp = std::floor(x+std::sqrt(3.0)*(y+1));
-    
-    
-    std::cout << "Temp: " << temp << std::endl;
-    
-    result.x = std::floor(std::floor((std::floor(2*(x+1))+temp)/3));//(int) mouseY / intHeight;//(int) mouseY / intHeight;
-    result.y = std::floor(std::floor((temp+std::floor(-1*x+std::sqrt(3) * (y+1)))/3));//((int)result.y % 2 != 0 ? (int) mouseX / intWidth : (int) (mouseX + intWidth/2) / intWidth);//((int)result.y % 2 != 0 ? (int) (mouseX / intWidth) : (int) (mouseX + intWidth/2) / intWidth);
-    
-    result.x--;
-    result.y--;
-    */
-    
-    //x = (x - (64 / 2)) / 64;
 
-    //double t1 = y / 32;//42.1930088996f;
-    //double t2 = std::floor(x + t1);
-    
-    //result.x = std::floor((std::floor(t1 - x) + t2) / 3);
-    //result.y = std::floor((std::floor(2 * x + 1) + t2) / 3);// - result.x;
-/*    
-    result.x = (y/(size * (3/2)));
-    result.y = (x/(size * std::sqrt(3))) - (0.5 * ((int)result.x & 1));*/
+    result.x = ((2.0/3)*x / size);
+    result.y = (((1.0/3) * std::sqrt(3) * y - (1.0/3) * x) / size);
 
-    result.x = (2.0/3)*x / size;
-    result.y = ((1.0/3) * std::sqrt(3) * y - (1.0/3) * x) / size;
-    
-    //cout << "X: " << x << endl;
-    //cout << "Y: " << y << endl;
-    
-    std::cout<<"X -- " << result.x << "\tY -- " << result.y <<std::endl; 
+
+    //return findNearestHex(result);
     return result;
+}
+
+sf::Vector2f findNearestHex(sf::Vector2f coords)
+{
+    float x = coords.x;
+    float y = coords.y;
+    float z = -coords.x-coords.y;
+
+    int rx = round(x);
+    int ry = round(y);
+    int rz = round(z);
+
+    float xDiff = abs(rx-x);
+    float yDiff = abs(ry-y);
+    float zDiff = abs(rz - z);
+
+    if(xDiff > yDiff && xDiff > zDiff)
+    {
+        rx = -ry-rz;
+    }
+    else if(yDiff > zDiff)
+    {
+        ry = -rx-rz;
+    }
+    else
+    {
+        rz = -rx-ry;
+    }
+
+
+
+    float q = rx;
+    float r = ry + (rx-(rx&1))/2;
+
+    coords.x = q;
+    coords.y = r;
+    std::cout<<"X -- " << coords.x << "\tY -- " << coords.y <<std::endl;
+
+    coords.x = coords.x - abs(x-coords.x);
+    coords.y = coords.y - abs(y-coords.y);
+
+    return coords;
 }
