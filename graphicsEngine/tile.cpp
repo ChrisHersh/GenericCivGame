@@ -57,10 +57,10 @@ void tile::updateSprite()
     currSprite = new sf::Sprite(*currTexture);
     if(selected)
     {
-	std::cout << "\tRed-Selected" << std::endl;
 	currSprite->setColor(sf::Color::Red);
     }
     currSprite->setPosition(xPos, yPos);
+    currSprite->setRotation(60);
 }
 //tile::getUnit()
 //{
