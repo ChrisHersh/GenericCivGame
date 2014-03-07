@@ -18,7 +18,6 @@ public:
     //setUnit();
     void selectTile();
     void unselectTile();
-    
 
     void updateSprite();
 
